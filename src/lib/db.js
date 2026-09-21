@@ -10,7 +10,9 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PRODUCT_SEED, ORDER_SEED, DELIVERY_OPTIONS } from '../data/catalog.js';
 
-const DEFAULT_DB_PATH = join(dirname(fileURLToPath(import.meta.url)), '../../data/store.db.json');
+const DEFAULT_DB_PATH = process.env.VERCEL
+  ? '/tmp/novamart-store.db.json'
+  : join(dirname(fileURLToPath(import.meta.url)), '../../data/store.db.json');
 const DB_PATH = process.env.NOVAMART_DB_PATH ? resolve(process.cwd(), process.env.NOVAMART_DB_PATH) : DEFAULT_DB_PATH;
 
 let cache = null;
