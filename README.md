@@ -22,7 +22,7 @@ orders are **fictional**.
 - Orders: list, filter by status, detail view, status updates
   (Pending → Confirmed → Shipped → Delivered / Cancelled)
 
-**Demo admin credentials:** `admin@novamart.demo` / `novamart123`
+**Admin credentials:** `admin@novamart.demo` / `novamart123`
 
 ## Run it
 
@@ -89,7 +89,7 @@ NOVAMART_DB_PATH=./data/store.db.json
 3. Keep the default `npm install && npm run build` + `npm start` flow.
 4. Optionally mount a persistent volume for `data/` if you want to keep the JSON DB between deploys.
 
-> Best practice: the current JSON DB is suitable for a demo, but a production deployment should move to a hosted database such as Postgres or Turso and swap the logic in `src/lib/db.js`.
+> Best practice: the current JSON DB is suitable for low-volume use, but a production deployment should move to a hosted database such as Postgres or Turso and swap the logic in `src/lib/db.js`.
 
 ---
 © 2026 NovaMart Stores (concept) — designed & engineered by **Kleepex**.
