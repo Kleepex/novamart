@@ -3,7 +3,7 @@ import StoreLayout from '../layouts/StoreLayout.astro';
 import { getProducts } from '../lib/db';
 import { DELIVERY_OPTIONS, NIGERIAN_STATES } from '../data/catalog';
 
-const products = getProducts();
+const products = await getProducts();
 const error = Astro.url.searchParams.get('error');
 ---
 

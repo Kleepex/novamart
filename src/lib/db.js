@@ -1,85 +1,252 @@
 /**
- * NovaMart data layer — embedded JSON-file database.
- * ─────────────────────────────────────────────────
- * Structured so the storage engine can be swapped for SQLite,
- * Turso or Postgres later without touching page code:
- * every page calls these functions, never the file directly.
+ * NovaMart data layer — libSQL / Turso database.
+ * ─────────────────
+ * Every page calls these functions, never the database client
+ * directly, so the schema can grow here without touching page code.
+ *
+ * Connections:
+ *   - Production (Vercel): set TURSO_DATABASE_URL (+ TURSO_AUTH_TOKEN)
+ *   - Local development:  falls back to a local SQLite file at
+ *                         data/store.db (no credentials needed).
+ *
+ * All exports are async — remember to `await` them.
  */
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { createClient } from '@libsql/client';
+import { join, dirname } from 'node:path';
+import { mkdirSync } from 'node:fs';
 import { PRODUCT_SEED, ORDER_SEED, DELIVERY_OPTIONS } from '../data/catalog.js';
 
-const DEFAULT_DB_PATH = process.env.VERCEL
-  ? '/tmp/novamart-store.db.json'
-  : join(dirname(fileURLToPath(import.meta.url)), '../../data/store.db.json');
-const DB_PATH = process.env.NOVAMART_DB_PATH ? resolve(process.cwd(), process.env.NOVAMART_DB_PATH) : DEFAULT_DB_PATH;
+// Local (non-Turso) mode stores a SQLite file under data/.
+// Make sure the directory exists so a fresh clone works.
+const LOCAL_DB_FILE = process.env.NOVAMART_DB_PATH
+  ? process.env.NOVAMART_DB_PATH
+  : join(process.cwd(), 'data', 'store.db');
+if (!process.env.TURSO_DATABASE_URL) mkdirSync(dirname(LOCAL_DB_FILE), { recursive: true });
 
-let cache = null;
+const LOCAL_DB_PATH = 'file:' + LOCAL_DB_FILE;
 
-function load() {
-  if (cache) return cache;
-  if (existsSync(DB_PATH)) {
-    cache = JSON.parse(readFileSync(DB_PATH, 'utf8'));
-  } else {
-    cache = { products: PRODUCT_SEED, orders: [], admins: [{ email: 'admin@novamart.demo', password: 'novamart123' }], seq: 1 };
-    // Seed demo orders through the real creation path (minus stock checks on old dates)
-    for (const o of ORDER_SEED) cache.orders.push(buildOrder(o, false));
-    persist();
+export const client = createClient({
+  url: process.env.TURSO_DATABASE_URL || LOCAL_DB_PATH,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
+
+let ready = null;
+
+/** Creates tables on first use. Safe to call repeatedly. */
+function bootstrap() {
+  if (ready) return ready;
+  ready = (async () => {
+    await client.batch(
+      [
+        `CREATE TABLE IF NOT EXISTS products (
+           id TEXT PRIMARY KEY,
+           name TEXT NOT NULL,
+           category TEXT NOT NULL,
+           price INTEGER NOT NULL,
+           stock INTEGER NOT NULL,
+           blurb TEXT NOT NULL,
+           color TEXT,
+           image TEXT,
+           sort_order INTEGER
+         )`,
+        `CREATE TABLE IF NOT EXISTS orders (
+           ref TEXT PRIMARY KEY,
+           id TEXT NOT NULL,
+           seq INTEGER NOT NULL,
+           customer TEXT,
+           phone TEXT,
+           email TEXT,
+           address TEXT,
+           city TEXT,
+           state TEXT,
+           delivery TEXT,
+           items TEXT NOT NULL,
+           subtotal INTEGER NOT NULL,
+           delivery_fee INTEGER NOT NULL,
+           total INTEGER NOT NULL,
+           status TEXT NOT NULL,
+           created_at TEXT NOT NULL
+         )`,
+        `CREATE TABLE IF NOT EXISTS admins (
+           email TEXT PRIMARY KEY,
+           password TEXT NOT NULL
+         )`,
+        `CREATE TABLE IF NOT EXISTS counters (
+           name TEXT PRIMARY KEY,
+           value INTEGER NOT NULL
+         )`,
+      ],
+      'write'
+    );
+    await seedIfEmpty();
+  })();
+  return ready;
+}
+
+async function seedIfEmpty() {
+  const { rows } = await client.execute('SELECT COUNT(*) AS n FROM products');
+  if (Number(rows[0].n) > 0) return;
+
+  const stmts = [];
+
+  // Products — preserve catalog order via sort_order
+  PRODUCT_SEED.forEach((p, i) => {
+    stmts.push({
+      sql: `INSERT INTO products (id, name, category, price, stock, blurb, color, image, sort_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [p.id, p.name, p.category, p.price, p.stock, p.blurb,
+             p.color ?? null, p.image ?? null, i],
+    });
+  });
+
+  // Demo admin
+  stmts.push({
+    sql: 'INSERT INTO admins (email, password) VALUES (?, ?)',
+    args: ['admin@novamart.demo', 'novamart123'],
+  });
+
+  // Demo orders (seeded without stock checks — see buildOrder)
+  let seq = 1;
+  for (const o of ORDER_SEED) {
+    const built = buildOrder(o, seq, PRODUCT_SEED, false);
+    stmts.push({
+      sql: `INSERT INTO orders
+              (ref, id, seq, customer, phone, email, address, city, state, delivery,
+               items, subtotal, delivery_fee, total, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        built.ref, built.id, seq,
+        built.customer, built.phone, built.email, built.address, built.city, built.state, built.delivery,
+        JSON.stringify(built.items), built.subtotal, built.deliveryFee, built.total,
+        built.status, built.createdAt,
+      ],
+    });
+    seq++;
   }
-  return cache;
+
+  stmts.push({ sql: 'INSERT INTO counters (name, value) VALUES (?, ?)', args: ['order_seq', seq] });
+  await client.batch(stmts, 'write');
 }
 
-function persist() {
-  mkdirSync(dirname(DB_PATH), { recursive: true });
-  const tmp = DB_PATH + '.tmp';
-  writeFileSync(tmp, JSON.stringify(cache, null, 2));
-  renameSync(tmp, DB_PATH); // atomic replace
+/** Returns the next order sequence number, persisted across invocations. */
+async function nextSeq() {
+  const { rows } = await client.execute({
+    sql: 'UPDATE counters SET value = value + 1 WHERE name = ? RETURNING value',
+    args: ['order_seq'],
+  });
+  return Number(rows[0].value);
 }
 
-/* ── Products ─────────────────────────────────────── */
-export function getProducts({ q = '', category = '', sort = 'featured' } = {}) {
-  const db = load();
-  let list = [...db.products];
+/** Maps a products row to the shape page code expects. */
+const rowToProduct = (r) => ({
+  id: r.id,
+  name: r.name,
+  category: r.category,
+  price: Number(r.price),
+  stock: Number(r.stock),
+  blurb: r.blurb,
+  color: r.color ?? undefined,
+  image: r.image ?? undefined,
+});
+
+/** Maps an orders row to the shape page code expects. */
+const rowToOrder = (r) => ({
+  id: r.id,
+  ref: r.ref,
+  customer: r.customer ?? '',
+  phone: r.phone ?? '',
+  email: r.email ?? '',
+  address: r.address ?? '',
+  city: r.city ?? '',
+  state: r.state ?? '',
+  delivery: r.delivery ?? '',
+  items: JSON.parse(r.items),
+  subtotal: Number(r.subtotal),
+  deliveryFee: Number(r.delivery_fee),
+  total: Number(r.total),
+  status: r.status,
+  createdAt: r.created_at,
+});
+
+/* ── Products ─────────────────────── */
+export async function getProducts({ q = '', category = '', sort = 'featured' } = {}) {
+  await bootstrap();
+  let sql = 'SELECT * FROM products';
+  const filter = [];
+  const args = [];
   if (q) {
-    const needle = q.toLowerCase();
-    list = list.filter((p) => (p.name + ' ' + p.blurb + ' ' + p.category).toLowerCase().includes(needle));
+    // Concatenate the searchable fields with a space, then match case-insensitively.
+    filter.push("lower(name || ' || blurb || ' || category) LIKE ?");
+    args.push('%' + q.toLowerCase() + '%');
   }
-  if (category) list = list.filter((p) => p.category === category);
-  if (sort === 'price-asc') list.sort((a, b) => a.price - b.price);
-  else if (sort === 'price-desc') list.sort((a, b) => b.price - a.price);
-  else if (sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
-  else if (sort === 'stock') list.sort((a, b) => a.stock - b.stock);
-  return list;
+  if (category) {
+    filter.push('category = ?');
+    args.push(category);
+  }
+  if (filter.length) sql += ' WHERE ' + filter.join(' AND ');
+
+  const order =
+    sort === 'price-asc' ? 'price ASC'
+    : sort === 'price-desc' ? 'price DESC'
+    : sort === 'name' ? 'name ASC'
+    : sort === 'stock' ? 'stock ASC'
+    : 'sort_order ASC';
+  sql += ' ORDER BY ' + order;
+
+  const { rows } = await client.execute({ sql, args });
+  return rows.map(rowToProduct);
 }
 
-export const getProduct = (id) => load().products.find((p) => p.id === id) || null;
+export async function getProduct(id) {
+  await bootstrap();
+  const { rows } = await client.execute({ sql: 'SELECT * FROM products WHERE id = ?', args: [id] });
+  return rows[0] ? rowToProduct(rows[0]) : null;
+}
 
-export function saveProduct(data) {
-  const db = load();
+export async function saveProduct(data) {
+  await bootstrap();
+
   if (data.id) {
-    const i = db.products.findIndex((p) => p.id === data.id);
-    if (i === -1) return null;
-    db.products[i] = { ...db.products[i], ...data };
-  } else {
-    data.id = 'p' + String(Math.max(0, ...db.products.map((p) => parseInt(p.id.slice(1)))) + 1).padStart(3, '0');
-    db.products.push(data);
+    const existing = await getProduct(data.id);
+    if (!existing) return null;
+    const merged = { ...existing, ...data };
+    await client.execute({
+      sql: `UPDATE products
+            SET name = ?, category = ?, price = ?, stock = ?, blurb = ?, color = ?, image = ?
+            WHERE id = ?`,
+      args: [merged.name, merged.category, merged.price, merged.stock, merged.blurb,
+             merged.color ?? null, merged.image ?? null, data.id],
+    });
+    return merged;
   }
-  persist();
-  return data;
+
+  // Generate the next p### id from the current max
+  const { rows } = await client.execute('SELECT id FROM products');
+  const maxN = Math.max(0, ...rows.map((r) => parseInt(String(r.id).slice(1)) || 0));
+  const id = 'p' + String(maxN + 1).padStart(3, '0');
+
+  await client.execute({
+    sql: `INSERT INTO products (id, name, category, price, stock, blurb, color, image, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [id, data.name, data.category, data.price, data.stock, data.blurb,
+           data.color ?? null, data.image ?? null, rows.length],
+  });
+  return { ...data, id };
 }
 
-export function deleteProduct(id) {
-  const db = load();
-  db.products = db.products.filter((p) => p.id !== id);
-  persist();
+export async function deleteProduct(id) {
+  await bootstrap();
+  await client.execute({ sql: 'DELETE FROM products WHERE id = ?', args: [id] });
 }
 
-/* ── Orders ───────────────────────────────────────── */
-function buildOrder(data, decrementStock = true) {
-  const db = cache || load();
+/* ── Orders ───────────────────────── */
+/**
+ * Validates items against the catalog and builds the order object.
+ * Pass `products` to reuse a list already fetched this request.
+ */
+function buildOrder(data, seq, products, decrementStock = true) {
   const items = data.items.map((it) => {
-    const p = db.products.find((pr) => pr.id === it.id);
+    const p = products.find((pr) => pr.id === it.id);
     if (!p) throw new Error('Unknown product ' + it.id);
     const qty = Math.max(1, Math.min(99, parseInt(it.qty) || 1));
     if (decrementStock && p.stock < qty) throw new Error(`“${p.name}” is out of stock.`);
@@ -88,7 +255,6 @@ function buildOrder(data, decrementStock = true) {
 
   const subtotal = items.reduce((s, it) => s + it.price * it.qty, 0);
   const deliveryFee = DELIVERY_OPTIONS[data.delivery]?.fee ?? 0;
-  const seq = db.seq++;
   return {
     id: 'ord_' + seq,
     ref: 'NM-' + String(100000 + seq).slice(1),
@@ -108,43 +274,75 @@ function buildOrder(data, decrementStock = true) {
   };
 }
 
-export function createOrder(data) {
-  const db = load();
-  const order = buildOrder(data, true);
-  // Decrement stock only after successful validation
-  for (const it of order.items) {
-    const p = db.products.find((pr) => pr.id === it.productId);
-    p.stock -= it.qty;
-  }
-  db.orders.unshift(order);
-  persist();
+export async function createOrder(data) {
+  await bootstrap();
+  const products = await getProducts();
+  const seq = await nextSeq();
+  const order = buildOrder(data, seq, products, true);
+
+  // Insert the order and decrement stock atomically.
+  const stmts = [
+    {
+      sql: `INSERT INTO orders
+              (ref, id, seq, customer, phone, email, address, city, state, delivery,
+               items, subtotal, delivery_fee, total, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        order.ref, order.id, seq,
+        order.customer, order.phone, order.email, order.address, order.city, order.state, order.delivery,
+        JSON.stringify(order.items), order.subtotal, order.deliveryFee, order.total,
+        order.status, order.createdAt,
+      ],
+    },
+    ...order.items.map((it) => ({
+      sql: 'UPDATE products SET stock = stock - ? WHERE id = ?',
+      args: [it.qty, it.productId],
+    })),
+  ];
+  await client.batch(stmts, 'write');
   return order;
 }
 
-export const listOrders = () => load().orders;
-export const getOrder = (ref) => load().orders.find((o) => o.ref === ref) || null;
-
-export function updateOrderStatus(ref, status) {
-  const db = load();
-  const o = db.orders.find((x) => x.ref === ref);
-  if (o) { o.status = status; persist(); }
-  return o;
+export async function listOrders() {
+  await bootstrap();
+  const { rows } = await client.execute('SELECT * FROM orders ORDER BY seq DESC');
+  return rows.map(rowToOrder);
 }
 
-/* ── Admin ────────────────────────────────────────── */
-export function findAdmin(email) {
-  return load().admins.find((a) => a.email.toLowerCase() === String(email).toLowerCase()) || null;
+export async function getOrder(ref) {
+  await bootstrap();
+  const { rows } = await client.execute({ sql: 'SELECT * FROM orders WHERE ref = ?', args: [ref] });
+  return rows[0] ? rowToOrder(rows[0]) : null;
 }
 
-export function getKpis() {
-  const db = load();
-  const active = db.orders.filter((o) => o.status !== 'Cancelled');
+export async function updateOrderStatus(ref, status) {
+  await bootstrap();
+  await client.execute({ sql: 'UPDATE orders SET status = ? WHERE ref = ?', args: [status, ref] });
+  return getOrder(ref);
+}
+
+/* ── Admin ────────────────────────── */
+export async function findAdmin(email) {
+  await bootstrap();
+  const { rows } = await client.execute({
+    sql: 'SELECT * FROM admins WHERE lower(email) = lower(?)',
+    args: [String(email)],
+  });
+  return rows[0] ? { email: rows[0].email, password: rows[0].password } : null;
+}
+
+export async function getKpis() {
+  await bootstrap();
+  const orders = await listOrders();
+  const active = orders.filter((o) => o.status !== 'Cancelled');
+  const { rows: prodRows } = await client.execute('SELECT stock FROM products');
+  const stocks = prodRows.map((r) => Number(r.stock));
   return {
     revenue: active.reduce((s, o) => s + o.total, 0),
-    orders: db.orders.length,
-    pending: db.orders.filter((o) => o.status === 'Pending').length,
-    products: db.products.length,
-    lowStock: db.products.filter((p) => p.stock < 10).length,
-    units: db.products.reduce((s, p) => s + p.stock, 0),
+    orders: orders.length,
+    pending: orders.filter((o) => o.status === 'Pending').length,
+    products: stocks.length,
+    lowStock: stocks.filter((s) => s < 10).length,
+    units: stocks.reduce((s, n) => s + n, 0),
   };
 }

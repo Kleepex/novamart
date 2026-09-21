@@ -7,7 +7,7 @@ import { CATEGORIES } from '../data/catalog';
 const q = Astro.url.searchParams.get('q') ?? '';
 const cat = Astro.url.searchParams.get('cat') ?? '';
 const sort = Astro.url.searchParams.get('sort') ?? 'featured';
-const products = getProducts({ q, category: cat, sort });
+const products = await getProducts({ q, category: cat, sort });
 
 const chip = (label, value) => {
   const params = new URLSearchParams();

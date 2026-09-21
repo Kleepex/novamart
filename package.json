@@ -9,10 +9,12 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build"
+    "build": "astro build",
+    "preview": "astro preview"
   },
   "dependencies": {
     "@astrojs/vercel": "^9.0.0",
+    "@libsql/client": "^0.18.0",
     "astro": "^5.18.2"
   }
 }

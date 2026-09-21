@@ -16,7 +16,7 @@ export const POST: APIRoute = async (context) => {
   const next = String(form.get('next') || '/admin');
   const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/admin';
 
-  const admin = findAdmin(email);
+  const admin = await findAdmin(email);
   if (!admin || admin.password !== password) {
     return redirect('/admin/login?error=' + encodeURIComponent('Invalid email or password.'));
   }

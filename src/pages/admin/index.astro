@@ -3,9 +3,9 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import { getKpis, listOrders, getProducts } from '../../lib/db';
 import { naira, fmtDate, STATUS_COLORS } from '../../lib/format';
 
-const k = getKpis();
-const recent = listOrders().slice(0, 6);
-const lowStock = getProducts({ sort: 'stock' }).filter((p) => p.stock < 10);
+const k = await getKpis();
+const recent = (await listOrders()).slice(0, 6);
+const lowStock = (await getProducts({ sort: 'stock' })).filter((p) => p.stock < 10);
 const kpis = [
   { label: 'Revenue (₦)', value: naira(k.revenue), sub: 'All non-cancelled orders' },
   { label: 'Orders', value: String(k.orders), sub: `${k.pending} awaiting confirmation` },

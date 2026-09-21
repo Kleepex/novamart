@@ -2,5 +2,10 @@ node_modules/
 dist/
 .astro/
 .vercel/
-data/store.db.json
+
+# Local database (libSQL/SQLite) — never commit data
+data/
+*.db
+*.db-wal
+*.db-shm
 .env

@@ -2,7 +2,7 @@
 import StoreLayout from '../layouts/StoreLayout.astro';
 import { getProducts } from '../lib/db';
 
-const products = getProducts();
+const products = await getProducts();
 ---
 
 <StoreLayout title="Your cart — NovaMart Stores">

@@ -9,7 +9,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     return redirect('/admin/products?error=' + encodeURIComponent('Name and description are required.'));
   }
 
-  saveProduct({
+  await saveProduct({
     id: String(form.get('id') || '') || undefined,
     name,
     blurb,

@@ -5,7 +5,7 @@ import { naira, fmtDate, STATUS_COLORS, ORDER_STATUSES } from '../../../lib/form
 
 const status = Astro.url.searchParams.get('status') ?? '';
 const saved = Astro.url.searchParams.get('saved');
-const orders = listOrders().filter((o) => !status || o.status === status);
+const orders = (await listOrders()).filter((o) => !status || o.status === status);
 
 const chip = (label, value) =>
   `<a class="chip ${status === value ? 'is-active' : ''}" href="/admin/orders${value ? '?status=' + value : ''}">${label}</a>`;

@@ -29,13 +29,13 @@ orders are **fictional**.
 ```bash
 npm install
 npm run dev        # dev server → http://localhost:4321
-npm run build      # production build
-npm start          # serve production build (set HOST/PORT env as needed)
+npm run build      # production build (.vercel/output)
+npm run preview    # preview the production build locally
 ```
 
 ## Architecture
-
-- **Astro 5 SSR** with `@astrojs/node` (standalone) — server-rendered pages + form-action APIs
+- **Astro 5 SSR** with `@astrojs/vercel` — server-rendered pages + form-action APIs
+deployed as Vercel Serverless Functions
 - **Embedded JSON database** at `data/store.db.json` (auto-seeded on first run, git-ignored).
   All data access goes through `src/lib/db.js` — swap the storage engine for SQLite / Turso /
   Postgres in that one file for production.
@@ -49,47 +49,42 @@ npm start          # serve production build (set HOST/PORT env as needed)
 2. Add payments: Paystack or Flutterwave checkout integration
 3. Order notifications: email/WhatsApp via a provider (e.g. Resend, Termii)
 4. Real product images in `public/products/` + richer storefront SEO
-5. Deploy: any Node host (Render, Railway, VPS). For Vercel, use the `@astrojs/vercel`
-   adapter together with a hosted database.
+5. Deploy to Vercel (`@astrojs/vercel` adapter, already configured).
 
-## Deploy to a Node host
+## Deploy to Vercel
+NovaMart uses the `@astrojs/vercel` adapter, so it deploys as Vercel Serverless Functions.
+Vercel auto-detects the build command (`npm install && npm run build`) and produces the
+Build Output API bundle in `.vercel/output`. No start command is needed.
 
-NovaMart is set up for Astro's Node standalone adapter, so it works on Render, Railway, Fly.io,
-Koyeb, or any VPS that can run `npm install && npm run build && npm start`.
-
-### Required environment variables
-
-Create a `.env` file or configure these values in your host dashboard:
+### Required environment variables (Vercel → Project → Settings → Environment Variables)
 
 ```bash
 NOVAMART_SECRET=change-this-to-a-long-random-secret
 PUBLIC_URL=https://your-app.example.com
-HOST=0.0.0.0
-PORT=4321
-NOVAMART_DB_PATH=./data/store.db.json
 ```
 
-- `NOVAMART_SECRET` protects the admin session cookie.
+- `NOVAMART_SECRET` protects the admin session cookie. **Set this in production** — the
+  built-in fallback secret is public and would let anyone forge an admin session.
 - `PUBLIC_URL` sets the deployed site origin for Astro URL generation.
-- `HOST` and `PORT` are used by the standalone Node server.
-- `NOVAMART_DB_PATH` lets you point data storage to a mounted volume or persistent directory.
 
-### Render example
+### Steps
+1. Import the repository at [vercel.com/new](https://vercel.com/new).
+2. Framework preset: **Astro** (auto-detected).
+3. Add the environment variables above.
+4. Deploy.
 
-1. Create a new Web Service from this repository.
-2. Set the build command to `npm install && npm run build`.
-3. Set the start command to `npm start`.
-4. Add the environment variables above.
-5. Make sure the app has a persistent disk or use a real database before production traffic.
+### ⚠️ Data persistence on Vercel
 
-### Railway example
+The demo stores data in a JSON file. Vercel's filesystem is **read-only except `/tmp`, and
+`/tmp` does not persist** between invocations. The app detects Vercel and falls back to
+`/tmp/novamart-store.db.json`, so it boots and browses correctly — but **orders placed and
+products edited in the admin will not survive** a cold start or a new function instance.
 
-1. Import the repo and choose the Node environment.
-2. Add the same env vars.
-3. Keep the default `npm install && npm run build` + `npm start` flow.
-4. Optionally mount a persistent volume for `data/` if you want to keep the JSON DB between deploys.
+The storefront and the read-only admin views work out of the box. To make writes persist,
+swap the storage engine in `src/lib/db.js` for a hosted database (Turso, Postgres, Vercel KV)
+before taking real traffic. Set `NOVAMART_DB_PATH` only on hosts with a persistent disk.
 
-> Best practice: the current JSON DB is suitable for low-volume use, but a production deployment should move to a hosted database such as Postgres or Turso and swap the logic in `src/lib/db.js`.
+> Best practice: the current JSON DB is suitable for a demo, but a production deployment should move to a hosted database such as Postgres or Turso and swap the logic in `src/lib/db.js`.
 
 ---
 © 2026 NovaMart Stores (concept) — designed & engineered by **Kleepex**.

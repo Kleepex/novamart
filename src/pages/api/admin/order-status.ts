@@ -7,7 +7,7 @@ export const POST: APIRoute = async ({ url, request, redirect }) => {
   const form = await request.formData();
   const status = String(form.get('status') || '');
   if (ref && ORDER_STATUSES.includes(status)) {
-    updateOrderStatus(ref, status);
+    await updateOrderStatus(ref, status);
   }
   return redirect('/admin/orders/' + ref + '?saved=1', 303);
 };

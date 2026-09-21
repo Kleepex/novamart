@@ -6,7 +6,7 @@ import { CATEGORIES } from '../../../data/catalog';
 
 const q = Astro.url.searchParams.get('q') ?? '';
 const cat = Astro.url.searchParams.get('cat') ?? '';
-const products = getProducts({ q, category: cat, sort: 'name' });
+const products = await getProducts({ q, category: cat, sort: 'name' });
 const saved = Astro.url.searchParams.get('saved');
 const deleted = Astro.url.searchParams.get('deleted');
 ---

@@ -26,7 +26,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   }
 
   try {
-    const order = createOrder({
+    const order = await createOrder({
       customer, phone, address, city, state, delivery,
       email: String(form.get('email') || ''),
       notes: String(form.get('notes') || ''),

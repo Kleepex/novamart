@@ -5,7 +5,7 @@ import { naira, fmtDate, STATUS_COLORS, ORDER_STATUSES } from '../../../lib/form
 import { DELIVERY_OPTIONS } from '../../../data/catalog';
 
 const { ref } = Astro.params;
-const o = getOrder(ref);
+const o = await getOrder(ref);
 if (!o) return Astro.redirect('/admin/orders');
 ---
 

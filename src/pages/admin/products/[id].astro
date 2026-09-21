@@ -7,7 +7,7 @@ const { id } = Astro.params;
 const isNew = id === 'new';
 const p = isNew
   ? { id: '', name: '', category: CATEGORIES[0], price: 0, stock: 0, blurb: '', color: '#dbeafe' }
-  : getProduct(id);
+  : await getProduct(id);
 if (!p) return Astro.redirect('/admin/products');
 
 const TILE_COLORS = ['#dbeafe', '#e0e7ff', '#ede9fe', '#fef3c7', '#dcfce7', '#e0f2fe', '#fee2e2', '#fce7f3', '#ffedd5', '#ecfccb', '#d9f99d', '#fdf4ff'];

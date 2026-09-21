@@ -5,7 +5,7 @@ import { naira, fmtDate, STATUS_COLORS } from '../../lib/format';
 import { DELIVERY_OPTIONS } from '../../data/catalog';
 
 const { ref } = Astro.params;
-const order = getOrder(ref);
+const order = await getOrder(ref);
 if (!order) return Astro.redirect('/');
 const isNew = Astro.url.searchParams.get('new') === '1';
 const color = STATUS_COLORS[order.status] || '#555';

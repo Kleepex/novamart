@@ -5,10 +5,10 @@ import { getProduct, getProducts } from '../../lib/db';
 import { naira } from '../../lib/format';
 
 const { id } = Astro.params;
-const p = getProduct(id);
+const p = await getProduct(id);
 if (!p) return Astro.redirect('/');
 
-const related = getProducts({ category: p.category }).filter((x) => x.id !== p.id).slice(0, 4);
+const related = (await getProducts({ category: p.category })).filter((x) => x.id !== p.id).slice(0, 4);
 const initials = p.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 ---
 
