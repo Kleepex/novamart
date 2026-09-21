@@ -7,7 +7,7 @@ interface Props {
 }
 const {
   title = 'NovaMart Stores — Everyday essentials, delivered across Nigeria',
-  description = 'Concept e-commerce demo by Kleepex. Shop electronics, fashion, home essentials, beauty and groceries with nationwide delivery.',
+  description = 'Shop electronics, fashion, home essentials, beauty and groceries with nationwide delivery across Nigeria.',
 } = Astro.props;
 const q = Astro.url.searchParams.get('q') ?? '';
 ---
@@ -70,18 +70,13 @@ const q = Astro.url.searchParams.get('q') ?? '';
     </script>
   </head>
   <body>
-    <div class="demo-ribbon">
-      <b>Concept demo</b> — fictional products, prices (₦) and orders. Built by Kleepex as an
-      e-commerce showcase.
-    </div>
-
     <header class="store-header">
       <div class="container store-header__in">
         <a href="/" class="brand" aria-label="NovaMart Stores — home">
           <span class="brand__mark">N</span>
           <span>
             NovaMart
-            <small>Nigeria's demo store</small>
+            <small>Nigeria's store</small>
           </span>
         </a>
 
@@ -104,7 +99,7 @@ const q = Astro.url.searchParams.get('q') ?? '';
 
     <footer class="store-footer">
       <div class="container row">
-        <span>© 2026 NovaMart Stores — a concept e-commerce application.</span>
+        <span>© 2026 NovaMart Stores.</span>
         <span>Designed &amp; engineered by <a href="https://www.kleepex.com.ng"><b>Kleepex</b></a></span>
       </div>
     </footer>
