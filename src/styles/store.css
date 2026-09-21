@@ -160,9 +160,18 @@ button { cursor: pointer; border: 0; background: none; }
 .pcard:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: var(--line-strong); }
 .pcard__tile {
   aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center;
-  position: relative;
+  position: relative; overflow: hidden;
+}
+.pcard__image {
+  width: 100%; height: 100%; object-fit: cover; display: block;
 }
 .pcard__letter { font-size: 3.2rem; font-weight: 800; color: rgba(18, 33, 27, 0.35); letter-spacing: -0.05em; }
+.pdp__visual {
+  position: relative; aspect-ratio: 1/0.85; border-radius: var(--r-xl); display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.pdp__image {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
 .pcard__cat {
   position: absolute; top: 0.7rem; left: 0.7rem;
   font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;

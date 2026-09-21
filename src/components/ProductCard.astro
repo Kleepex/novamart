@@ -2,7 +2,7 @@
 import { naira } from '../lib/format';
 
 interface Props {
-  p: { id: string; name: string; category: string; price: number; stock: number; blurb: string; color: string };
+  p: { id: string; name: string; category: string; price: number; stock: number; blurb: string; color: string; image?: string };
 }
 const { p } = Astro.props;
 const initials = p.name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -18,7 +18,7 @@ const stockBadge =
   <a href={`/product/${p.id}`} class="pcard__tile" style={`background: linear-gradient(140deg, ${p.color}, #fff)`} aria-label={p.name}>
     <span class="pcard__cat">{p.category}</span>
     <Fragment set:html={stockBadge} />
-    <span class="pcard__letter" aria-hidden="true">{initials}</span>
+    {p.image ? <img class="pcard__image" src={p.image} alt={p.name} /> : <span class="pcard__letter" aria-hidden="true">{initials}</span>}
   </a>
   <div class="pcard__body">
     <h3 class="pcard__name"><a href={`/product/${p.id}`}>{p.name}</a></h3>
