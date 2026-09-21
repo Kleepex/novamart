@@ -2,7 +2,7 @@ import { e as createComponent, k as renderComponent, r as renderTemplate, h as c
 import 'piccolore';
 import { $ as $$StoreLayout } from '../../chunks/StoreLayout_BCkAozPn.mjs';
 import { $ as $$ProductCard } from '../../chunks/ProductCard_D2op6Qn2.mjs';
-import { c as getProduct, a as getProducts } from '../../chunks/db_dt1ysPcI.mjs';
+import { c as getProduct, a as getProducts } from '../../chunks/db_CyJmpg4P.mjs';
 import { n as naira } from '../../chunks/format_CeNNESN9.mjs';
 export { renderers } from '../../renderers.mjs';
 

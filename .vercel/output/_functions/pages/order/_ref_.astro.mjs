@@ -1,7 +1,7 @@
 import { e as createComponent, k as renderComponent, r as renderTemplate, h as createAstro, m as maybeRenderHead, g as addAttribute, p as renderScript } from '../../chunks/astro/server_BHx4noih.mjs';
 import 'piccolore';
 import { $ as $$StoreLayout } from '../../chunks/StoreLayout_BCkAozPn.mjs';
-import { b as getOrder, D as DELIVERY_OPTIONS } from '../../chunks/db_dt1ysPcI.mjs';
+import { b as getOrder, D as DELIVERY_OPTIONS } from '../../chunks/db_CyJmpg4P.mjs';
 import { S as STATUS_COLORS, f as fmtDate, n as naira } from '../../chunks/format_CeNNESN9.mjs';
 export { renderers } from '../../renderers.mjs';
 

@@ -1,7 +1,7 @@
 import { e as createComponent, k as renderComponent, r as renderTemplate, p as renderScript, u as unescapeHTML, m as maybeRenderHead } from '../chunks/astro/server_BHx4noih.mjs';
 import 'piccolore';
 import { $ as $$StoreLayout } from '../chunks/StoreLayout_BCkAozPn.mjs';
-import { a as getProducts } from '../chunks/db_dt1ysPcI.mjs';
+import { a as getProducts } from '../chunks/db_CyJmpg4P.mjs';
 /* empty css                                */
 export { renderers } from '../renderers.mjs';
 

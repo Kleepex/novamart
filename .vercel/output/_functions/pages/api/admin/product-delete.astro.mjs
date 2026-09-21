@@ -1,4 +1,4 @@
-import { d as deleteProduct } from '../../../chunks/db_dt1ysPcI.mjs';
+import { d as deleteProduct } from '../../../chunks/db_CyJmpg4P.mjs';
 export { renderers } from '../../../renderers.mjs';
 
 const POST = async ({ url, redirect }) => {

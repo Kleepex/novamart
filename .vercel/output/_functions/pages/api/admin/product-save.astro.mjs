@@ -1,4 +1,4 @@
-import { s as saveProduct } from '../../../chunks/db_dt1ysPcI.mjs';
+import { s as saveProduct } from '../../../chunks/db_CyJmpg4P.mjs';
 export { renderers } from '../../../renderers.mjs';
 
 const POST = async ({ request, redirect }) => {

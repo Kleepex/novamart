@@ -1,7 +1,7 @@
 import { e as createComponent, k as renderComponent, r as renderTemplate, h as createAstro, g as addAttribute, n as Fragment, m as maybeRenderHead } from '../../chunks/astro/server_BHx4noih.mjs';
 import 'piccolore';
 import { $ as $$AdminLayout } from '../../chunks/AdminLayout_Yfpc_MDA.mjs';
-import { a as getProducts, C as CATEGORIES } from '../../chunks/db_dt1ysPcI.mjs';
+import { a as getProducts, C as CATEGORIES } from '../../chunks/db_CyJmpg4P.mjs';
 import { n as naira } from '../../chunks/format_CeNNESN9.mjs';
 export { renderers } from '../../renderers.mjs';
 

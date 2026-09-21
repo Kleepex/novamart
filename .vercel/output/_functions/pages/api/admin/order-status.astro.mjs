@@ -1,4 +1,4 @@
-import { u as updateOrderStatus } from '../../../chunks/db_dt1ysPcI.mjs';
+import { u as updateOrderStatus } from '../../../chunks/db_CyJmpg4P.mjs';
 import { O as ORDER_STATUSES } from '../../../chunks/format_CeNNESN9.mjs';
 export { renderers } from '../../../renderers.mjs';
 
