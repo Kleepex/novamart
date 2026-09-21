@@ -1,0 +1,70 @@
+---
+import StoreLayout from '../layouts/StoreLayout.astro';
+import ProductCard from '../components/ProductCard.astro';
+import { getProducts } from '../lib/db';
+import { CATEGORIES } from '../data/catalog';
+
+const q = Astro.url.searchParams.get('q') ?? '';
+const cat = Astro.url.searchParams.get('cat') ?? '';
+const sort = Astro.url.searchParams.get('sort') ?? 'featured';
+const products = getProducts({ q, category: cat, sort });
+
+const chip = (label, value) => {
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (value) params.set('cat', value);
+  if (sort !== 'featured') params.set('sort', sort);
+  const qs = params.toString();
+  return `<a class="chip ${cat === value ? 'is-active' : ''}" href="/${qs ? '?' + qs : ''}">${label}</a>`;
+};
+
+const sortLink = (value, label) => {
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (cat) params.set('cat', cat);
+  if (value !== 'featured') params.set('sort', value);
+  return `<a class="chip ${sort === value ? 'is-active' : ''}" href="/?${params}">${label}</a>`;
+};
+---
+
+<StoreLayout>
+  <section class="store-hero">
+    <span class="pill">Free pickup in Kano · Nationwide delivery</span>
+    <h1>Everyday essentials your household actually needs — delivered.</h1>
+    <p>
+      Electronics, fashion, home &amp; living, beauty and groceries — curated for Nigerian homes and
+      priced in naira. This concept store demonstrates a full Kleepex e-commerce build.
+    </p>
+  </section>
+
+  {q && (
+    <p style="margin: 1.25rem 0 0; color: var(--ink-soft)">
+      {products.length} result{products.length === 1 ? '' : 's'} for <b>“{q}”</b>{' '}
+      <a href="/" style="font-weight: 600">Clear search</a>
+    </p>
+  )}
+
+  <div class="chip-bar" aria-label="Filter by category">
+    <Fragment set:html={chip('All products', '')} />
+    {CATEGORIES.map((c) => <Fragment set:html={chip(c, c)} />)}
+    <span style="flex: 1"></span>
+    <Fragment set:html={sortLink('featured', 'Featured')} />
+    <Fragment set:html={sortLink('price-asc', '₦ Low → High')} />
+    <Fragment set:html={sortLink('price-desc', '₦ High → Low')} />
+    <Fragment set:html={sortLink('name', 'A–Z')} />
+  </div>
+
+  {
+    products.length === 0 ? (
+      <div class="empty panel">
+        <div class="big">🛍️</div>
+        <h2>No products found</h2>
+        <p>Try a different search term or category.</p>
+      </div>
+    ) : (
+      <section class="pgrid" aria-label="Products">
+        {products.map((p) => <ProductCard p={p} />)}
+      </section>
+    )
+  }
+</StoreLayout>

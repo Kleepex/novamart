@@ -1,0 +1,57 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getProduct } from '../../../lib/db';
+import { CATEGORIES } from '../../../data/catalog';
+
+const { id } = Astro.params;
+const isNew = id === 'new';
+const p = isNew
+  ? { id: '', name: '', category: CATEGORIES[0], price: 0, stock: 0, blurb: '', color: '#dbeafe' }
+  : getProduct(id);
+if (!p) return Astro.redirect('/admin/products');
+
+const TILE_COLORS = ['#dbeafe', '#e0e7ff', '#ede9fe', '#fef3c7', '#dcfce7', '#e0f2fe', '#fee2e2', '#fce7f3', '#ffedd5', '#ecfccb', '#d9f99d', '#fdf4ff'];
+---
+
+<AdminLayout title={isNew ? 'New product' : `Edit — ${p.name}`} subtitle={isNew ? 'Add a product to the catalog' : p.id} active="products">
+  <form method="POST" action="/api/admin/product-save" style="max-width: 720px">
+    <input type="hidden" name="id" value={p.id} />
+    <div class="panel">
+      <div class="fgrid">
+        <div class="field full">
+          <label for="f-name">Product name *</label>
+          <input id="f-name" name="name" required value={p.name} placeholder="e.g. NaijaPods Pro Earbuds" />
+        </div>
+        <div class="field">
+          <label for="f-cat">Category *</label>
+          <select id="f-cat" name="category">
+            {CATEGORIES.map((c) => <option value={c} selected={p.category === c}>{c}</option>)}
+          </select>
+        </div>
+        <div class="field">
+          <label for="f-color">Tile colour</label>
+          <select id="f-color" name="color">
+            {TILE_COLORS.map((c) => <option value={c} selected={p.color === c}>{c}</option>)}
+          </select>
+          <span class="hint">Pastel background used on the product tile.</span>
+        </div>
+        <div class="field">
+          <label for="f-price">Price (₦) *</label>
+          <input id="f-price" name="price" type="number" min="0" step="50" required value={p.price} />
+        </div>
+        <div class="field">
+          <label for="f-stock">Stock *</label>
+          <input id="f-stock" name="stock" type="number" min="0" required value={p.stock} />
+        </div>
+        <div class="field full">
+          <label for="f-blurb">Description *</label>
+          <textarea id="f-blurb" name="blurb" required placeholder="One or two sentences that sell the product.">{p.blurb}</textarea>
+        </div>
+      </div>
+      <div style="display:flex; gap:0.75rem; margin-top: 1.4rem; flex-wrap: wrap">
+        <button class="btn btn--primary" type="submit">{isNew ? 'Create product' : 'Save changes'}</button>
+        <a href="/admin/products" class="btn btn--ghost">Cancel</a>
+      </div>
+    </div>
+  </form>
+</AdminLayout>

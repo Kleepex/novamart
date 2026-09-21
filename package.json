@@ -1,0 +1,19 @@
+{
+  "name": "novamart",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "NovaMart Stores — concept e-commerce application by Kleepex",
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "start": "node ./dist/server/entry.mjs"
+  },
+  "dependencies": {
+    "@astrojs/vercel": "^8.2.11",
+    "astro": "^5.18.2"
+  }
+}

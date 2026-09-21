@@ -1,0 +1,85 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getKpis, listOrders, getProducts } from '../../lib/db';
+import { naira, fmtDate, STATUS_COLORS } from '../../lib/format';
+
+const k = getKpis();
+const recent = listOrders().slice(0, 6);
+const lowStock = getProducts({ sort: 'stock' }).filter((p) => p.stock < 10);
+const kpis = [
+  { label: 'Revenue (₦)', value: naira(k.revenue), sub: 'All non-cancelled orders' },
+  { label: 'Orders', value: String(k.orders), sub: `${k.pending} awaiting confirmation` },
+  { label: 'Products', value: String(k.products), sub: `${k.units} units in stock` },
+  { label: 'Low stock', value: String(k.lowStock), sub: 'Below 10 units' },
+];
+---
+
+<AdminLayout title="Dashboard" subtitle="NovaMart at a glance — live store data">
+  <div class="kpis">
+    {kpis.map((x) => (
+      <div class="kpi">
+        <div class="label">{x.label}</div>
+        <div class="value">{x.value}</div>
+        <div class="sub">{x.sub}</div>
+      </div>
+    ))}
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 1.25rem; align-items: start" class="dash-grid">
+    <div class="panel" style="padding: 1rem 1.25rem">
+      <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 0.5rem">
+        <h2 style="margin:0">Latest orders</h2>
+        <a href="/admin/orders" style="font-weight: 600; font-size: 0.9rem">View all →</a>
+      </div>
+      <table class="tbl">
+        <thead>
+          <tr><th>Ref</th><th>Customer</th><th class="num">Total</th><th>Status</th><th>Placed</th></tr>
+        </thead>
+        <tbody>
+          {recent.map((o) => (
+            <tr>
+              <td><a href={`/admin/orders/${o.ref}`} style="font-weight:700">{o.ref}</a></td>
+              <td>{o.customer}<br /><span style="color:var(--ink-mute);font-size:0.84rem">{o.city}, {o.state}</span></td>
+              <td class="num"><b>{naira(o.total)}</b></td>
+              <td><span class="badge" style={`background:${STATUS_COLORS[o.status]}18;color:${STATUS_COLORS[o.status]}`}>{o.status}</span></td>
+              <td style="color:var(--ink-mute);font-size:0.85rem">{fmtDate(o.createdAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Stock alerts</h2>
+      {
+        lowStock.length === 0 ? (
+          <p style="color: var(--ink-mute)">All products are well stocked. ✅</p>
+        ) : (
+          <table class="tbl" style="font-size: 0.9rem">
+            <tbody>
+              {lowStock.slice(0, 6).map((p) => (
+                <tr>
+                  <td>
+                    <div style="display:flex; gap:0.6rem; align-items:center">
+                      <span class="avatar-tile" style={`background:${p.color}`}>{p.name[0]}</span>
+                      <a href={`/admin/products/${p.id}`} style="font-weight:600">{p.name}</a>
+                    </div>
+                  </td>
+                  <td class="num">
+                    <span class="badge" style={`background:${p.stock === 0 ? '#b91c1c18' : '#d9770618'}; color:${p.stock === 0 ? '#b91c1c' : '#d97706'}`}>
+                      {p.stock} left
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )
+      }
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  @media (max-width: 960px) { .dash-grid { grid-template-columns: 1fr !important; } }
+</style>
